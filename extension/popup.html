@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Figma TodoList</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 280px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #FFFFFF;
+      color: #1E1E1E;
+    }
+
+    h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #0D99FF;
+    }
+
+    .status {
+      padding: 12px;
+      background: #F5F5F5;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .status-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .label {
+      color: #666666;
+    }
+
+    .value {
+      font-weight: 500;
+    }
+
+    .value.success {
+      color: #0FA958;
+    }
+
+    .value.warning {
+      color: #F29E02;
+    }
+
+    .value.error {
+      color: #F24822;
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary {
+      background: #0D99FF;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #007BE5;
+    }
+
+    .btn-secondary {
+      background: #F5F5F5;
+      color: #1E1E1E;
+      border: 1px solid #E0E0E0;
+    }
+
+    .btn-secondary:hover {
+      background: #E0E0E0;
+    }
+
+    .footer {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #E0E0E0;
+      font-size: 11px;
+      color: #999999;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>📋 Figma TodoList</h1>
+
+  <div class="status">
+    <div class="status-item">
+      <span class="label">状态</span>
+      <span class="value" id="extension-status">就绪</span>
+    </div>
+    <div class="status-item">
+      <span class="label">当前文件</span>
+      <span class="value" id="current-file">未检测到</span>
+    </div>
+    <div class="status-item">
+      <span class="label">Todo 数量</span>
+      <span class="value" id="todo-count">0</span>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn-primary" id="open-figma">打开 Figma Design</button>
+    <button class="btn-secondary" id="refresh-status">刷新状态</button>
+    <button class="btn-secondary" id="clear-data">清除本地数据</button>
+  </div>
+
+  <div class="footer">
+    Figma TodoList Extension v1.0.0
+  </div>
+
+  <script>
+    // Check current tab
+    async function checkCurrentTab() {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const isFigma = tab.url && tab.url.includes('figma.com/design');
+
+      document.getElementById('extension-status').textContent = isFigma ? '已连接到 Figma' : '未打开 Figma';
+      document.getElementById('extension-status').className = `value ${isFigma ? 'success' : 'warning'}`;
+
+      if (isFigma) {
+        // Extract file key from URL
+        const match = tab.url.match(/figma\.com\/(?:design|file)\/([^/]+)/);
+        if (match) {
+          document.getElementById('current-file').textContent = match[1].substring(0, 12) + '...';
+          document.getElementById('current-file').className = 'value success';
+        }
+      }
+    }
+
+    // Open Figma
+    document.getElementById('open-figma').addEventListener('click', () => {
+      chrome.tabs.create({ url: 'https://www.figma.com/files' });
+    });
+
+    // Refresh status
+    document.getElementById('refresh-status').addEventListener('click', () => {
+      checkCurrentTab();
+    });
+
+    // Clear data
+    document.getElementById('clear-data').addEventListener('click', async () => {
+      if (confirm('确定要清除所有本地 Todo 数据吗？此操作不可撤销。')) {
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('figma-todo:')) {
+            keys.push(key);
+          }
+        }
+        keys.forEach(key => localStorage.removeItem(key));
+        alert('已清除所有本地数据。');
+        document.getElementById('todo-count').textContent = '0';
+      }
+    });
+
+    // Initial check
+    checkCurrentTab();
+  </script>
+</body>
+</html>
